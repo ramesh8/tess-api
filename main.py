@@ -46,7 +46,7 @@ async def filterpdf(q:str, file:UploadFile, response:Response):
                         plist.append(page)
                 if len(plist) > 0:
                     # now make pdf from pages in plist
-                    fname = f"filtered-{file.filename}"
+                    fname = f"filtered-{file.filename}.pdf"
                     outputpath = f"{extpath}/{fname}"
                     plist[0].save(outputpath, "PDF",resolution=100.0, save_all=True, append_images=plist[1:])
                     return FileResponse(path=outputpath, filename=fname, media_type='application/pdf')
