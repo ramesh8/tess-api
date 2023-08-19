@@ -22,7 +22,7 @@ def read_root():
     return {"message": "Welcome to Tesseract OCR API"}
 
 def searchq(text, query):
-    if text.find(query) != -1:
+    if text.lower().find(query.lower()) != -1:
         return True
     return False
 
@@ -30,7 +30,7 @@ def searchq(text, query):
 @app.post("/filterpdf/")
 async def filterpdf(q:str, file:UploadFile, response:Response):
     
-    if file.content_type == "application/zip":
+    if file.content_type in ["application/zip", "application/x-zip-compressed"]:
         extpath = os.path.join(f'./{tempdir}/{file.filename}/')
         try:
             with zipfile.ZipFile(io.BytesIO(await file.read()), 'r') as zip:
@@ -59,7 +59,7 @@ async def filterpdf(q:str, file:UploadFile, response:Response):
                     with zipfile.ZipFile(buff,mode="w",compression=zipfile.ZIP_DEFLATED) as zipw:
                         zipw.writestr(pdfinzipfname,temp.read())
                     headers =  {'Content-Disposition': f'attachment; filename="{zipfname}"'}
-                    return Response(buff.getvalue())
+                    return Response(buff.getvalue(), headers=headers)
             else:
                 response.status_code = 422
                 return {"message":"pdf file not found"}
