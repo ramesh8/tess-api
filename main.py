@@ -1,15 +1,17 @@
 from typing import Union
 from fastapi import FastAPI, UploadFile, File, Response
-from fastapi.responses import FileResponse
+from fastapi.responses import StreamingResponse, FileResponse
 import zipfile
 import os
 import aiofiles
 import io
+from io import StringIO
 import traceback
 from pathlib import Path
 from pdf2image import convert_from_path
 import pytesseract
 from PIL import Image
+import sys
 
 app = FastAPI()
 CHUNK_SIZE = 1024 * 1024
@@ -46,10 +48,18 @@ async def filterpdf(q:str, file:UploadFile, response:Response):
                         plist.append(page)
                 if len(plist) > 0:
                     # now make pdf from pages in plist
-                    fname = f"filtered-{file.filename}.pdf"
-                    outputpath = f"{extpath}/{fname}"
-                    plist[0].save(outputpath, "PDF",resolution=100.0, save_all=True, append_images=plist[1:])
-                    return FileResponse(path=outputpath, filename=fname, media_type='application/pdf')
+                    pdfinzipfname = pdffile[0].name.replace(".pdf","-filtered.pdf")
+                    zipfname = file.filename.replace(".zip","-filtered.zip")
+                    # temp = io.BytesIO()
+                    temp = io.BytesIO()
+                    buff = io.BytesIO()
+                    plist[0].save(temp, "PDF",resolution=100.0, save_all=True, append_images=plist[1:])
+                    temp.seek(0)
+                    # print(sys.getsizeof(temp))
+                    with zipfile.ZipFile(buff,mode="w",compression=zipfile.ZIP_DEFLATED) as zipw:
+                        zipw.writestr(pdfinzipfname,temp.read())
+                    headers =  {'Content-Disposition': f'attachment; filename="{zipfname}"'}
+                    return Response(buff.getvalue())
             else:
                 response.status_code = 422
                 return {"message":"pdf file not found"}
